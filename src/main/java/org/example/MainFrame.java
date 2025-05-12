@@ -7,10 +7,12 @@ package org.example;
 import com.sun.tools.javac.Main;
 
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.util.*;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.*;
@@ -23,7 +25,6 @@ import javax.swing.table.TableColumnModel;
  * @author smokc
  */
 public class MainFrame extends javax.swing.JFrame {
-
     /**
      * Creates new form MainFrame
      */
@@ -54,6 +55,7 @@ public class MainFrame extends javax.swing.JFrame {
         addColumnBttn = new javax.swing.JButton();
         addRowBttn = new javax.swing.JButton();
         jMenuBar1 = new javax.swing.JMenuBar();
+        exampleBttn = new JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -156,6 +158,17 @@ public class MainFrame extends javax.swing.JFrame {
                 addRowBttnActionPerformed(evt);
             }
         });
+
+
+        exampleBttn.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        exampleBttn.setText("Button");
+        exampleBttn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                exampleBttnActionPerformed(evt);
+            }
+        });
+
+
         setJMenuBar(jMenuBar1);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -172,7 +185,8 @@ public class MainFrame extends javax.swing.JFrame {
                                         .addComponent(importFileBttn, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                         .addComponent(delRowBttn, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                         .addComponent(addColumnBttn, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                        .addComponent(addRowBttn, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                        .addComponent(addRowBttn, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                        .addComponent(exampleBttn,GroupLayout.DEFAULT_SIZE,GroupLayout.DEFAULT_SIZE,Short.MAX_VALUE))
                                 .addContainerGap(18, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
@@ -192,12 +206,49 @@ public class MainFrame extends javax.swing.JFrame {
                                                 .addGap(18, 18, 18)
                                                 .addComponent(addColumnBttn)
                                                 .addGap(18, 18, 18)
-                                                .addComponent(addRowBttn)))
+                                                .addComponent(addRowBttn)
+                                                .addGap(18,18,18)
+                                                .addComponent(exampleBttn)))
                                 .addGap(0, 90, Short.MAX_VALUE))
         );
 
         pack();
     }// </editor-fold>
+
+    private void exampleBttnActionPerformed(ActionEvent evt) {
+        try {
+            String ageInput = JOptionPane.showInputDialog("Put age of Applicant:");
+            int ageSelected = Integer.parseInt(ageInput.trim());
+
+            DefaultTableModel tblModel = (DefaultTableModel) jTable1.getModel();
+            int ageColumnIndex = tblModel.findColumn("Age");
+
+            int rows = tblModel.getRowCount();
+            int result = 0;
+
+            for (int i = 0; i < rows; i++) {
+                Object p = tblModel.getValueAt(i, ageColumnIndex);
+                if (p != null && !p.toString().trim().isEmpty()) {
+                    try {
+                        int age = Integer.parseInt(p.toString().trim());
+                        if (age == ageSelected) {
+                            result++;
+                        }
+                    } catch (NumberFormatException e) {
+                        // Пропускаем нечисловые значения
+                    }
+                }
+            }
+
+            JOptionPane.showMessageDialog(this, "Найдено записей: " + result);
+
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Введите корректный возраст.");
+        }
+
+
+    }
+
     //DeleteButton
     private void delRowBttnActionPerformed(java.awt.event.ActionEvent evt) {
         DefaultTableModel tblModel = (DefaultTableModel) jTable1.getModel();
@@ -228,6 +279,7 @@ public class MainFrame extends javax.swing.JFrame {
             DefaultTableModel tblModel = (DefaultTableModel) jTable1.getModel();
             String path = JOptionPane.showInputDialog("Put absolute path to your file:");
             File file = new File(path);
+            ArrayList<Object> titles = new ArrayList<>();
 
             try (Scanner scanner = new Scanner(file)) {
 
@@ -235,14 +287,14 @@ public class MainFrame extends javax.swing.JFrame {
                     String headerLine = scanner.nextLine();
                     String[] columns = headerLine.split(",");
 
-                    tblModel.setColumnCount(0);
                     for (String col : columns) {
-                        tblModel.addColumn(col.trim());
+                        titles.addLast(col.trim());
                     }
                 }
-
                 tblModel.setRowCount(0);
-
+                tblModel.setColumnCount(0);
+                Object[] titleImport = titles.toArray();
+                tblModel.setColumnIdentifiers(titleImport);
                 while (scanner.hasNextLine()) {
                     String line = scanner.nextLine();
                     String[] values = line.split(",");
@@ -343,34 +395,44 @@ public class MainFrame extends javax.swing.JFrame {
     }
 
     private void exportFileBttnActionPerformed(java.awt.event.ActionEvent evt) {
+        ArrayList<String> titles = new ArrayList<>();
         DefaultTableModel tblModel = (DefaultTableModel) jTable1.getModel();
         File file = new File("SaveExample.csv");
-        try {
-            PrintWriter pw = new PrintWriter(file);
-            for(int col=0; col<tblModel.getColumnCount();col++){
-                pw.write(tblModel.getColumnName(col));
-                if(col<tblModel.getColumnCount()-1)pw.print(",");
+
+        try (PrintWriter pw = new PrintWriter(file)) {
+            // Сохраняем заголовки
+            for (int col = 0; col < tblModel.getColumnCount(); col++) {
+                titles.add(tblModel.getColumnName(col));
             }
-            pw.println();
-            for(int row=0; row<tblModel.getRowCount();row++){
-                for(int col=0; col<tblModel.getColumnCount();col++) {
-                    if(tblModel.getValueAt(row, col)!=null) {
-                        Object value = tblModel.getValueAt(row,col);
-                        if(value instanceof Boolean ){
-                            pw.print((Boolean) value ? "true":"false");
+            pw.println(String.join(",", titles));
+
+            // Индекс колонки Accepted
+            int acceptedColIndex = tblModel.findColumn("Accepted");
+
+            // Сохраняем строки
+            for (int row = 0; row < tblModel.getRowCount(); row++) {
+                List<String> rowData = new ArrayList<>();
+                for (int col = 0; col < tblModel.getColumnCount(); col++) {
+                    Object value = tblModel.getValueAt(row, col);
+                    if (value == null) {
+                        if (col == acceptedColIndex) {
+                            rowData.add("false");  // по умолчанию false
+                        } else {
+                            rowData.add(""); // пустая ячейка
                         }
-                        else if (col<tblModel.getColumnCount()-1) {
-                            pw.print(String.valueOf( value)+",");
-                        }
-                        else{
-                            pw.print(String.valueOf( value));
+                    } else {
+                        if (col == acceptedColIndex) {
+                            boolean acc = (Boolean) value;
+                            rowData.add(String.valueOf(acc));
+                        } else {
+                            rowData.add(value.toString());
                         }
                     }
                 }
-                pw.println();
+                pw.println(String.join(",", rowData));
             }
-        pw.close();
-        JOptionPane.showMessageDialog(this,"Data saved successfully");
+
+            JOptionPane.showMessageDialog(this, "Data saved successfully");
 
         } catch (FileNotFoundException ex) {
             Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
@@ -422,5 +484,6 @@ public class MainFrame extends javax.swing.JFrame {
     private javax.swing.JMenuBar jMenuBar1;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTable jTable1;
+    private JButton exampleBttn;
     // End of variables declaration
 }
